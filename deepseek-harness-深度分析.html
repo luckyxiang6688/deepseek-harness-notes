@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepSeek Harness（dsh）深度分析 — 深度专业分析</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --bg2: #161822;
+  --bg3: #1e2030;
+  --card: #1a1d2e;
+  --border: #2a2d42;
+  --text: #e0e0e8;
+  --text2: #9ca0b0;
+  --accent: #6c8cff;
+  --accent2: #a78bfa;
+  --accent3: #34d399;
+  --accent4: #f59e0b;
+  --accent5: #f472b6;
+  --accent6: #22d3ee;
+  --grad1: linear-gradient(135deg, #6c8cff, #a78bfa);
+  --grad2: linear-gradient(135deg, #34d399, #22d3ee);
+  --grad3: linear-gradient(135deg, #f59e0b, #f472b6);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); line-height: 1.8; }
+a { color: var(--accent); text-decoration: none; }
+
+/* Nav */
+.nav { position: fixed; top:0; left:0; width:260px; height:100vh; background: var(--bg2); border-right:1px solid var(--border); padding:24px 0; overflow-y:auto; z-index:100; }
+.nav h2 { font-size:18px; padding:0 24px 16px; color: var(--accent); letter-spacing:1px; }
+.nav a { display:block; padding:8px 24px; color:var(--text2); font-size:14px; transition: all .2s; border-left:3px solid transparent; }
+.nav a:hover, .nav a.active { color:var(--accent); background:rgba(108,140,255,.08); border-left-color:var(--accent); }
+.nav .sub { padding-left:40px; font-size:13px; }
+
+/* Main */
+.main { margin-left:260px; padding:40px 60px 80px; max-width:1100px; }
+.hero { text-align:center; padding:60px 0 40px; }
+.hero h1 { font-size:42px; background: var(--grad1); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:12px; }
+.hero p { color:var(--text2); font-size:18px; max-width:700px; margin:0 auto; }
+
+.section { margin-bottom:64px; scroll-margin-top:24px; }
+.section-title { font-size:28px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:12px; }
+.section-title .num { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:10px; background:var(--grad1); color:#fff; font-size:16px; font-weight:700; flex-shrink:0; }
+.section-desc { color:var(--text2); font-size:15px; margin-bottom:32px; padding-left:48px; }
+
+.subsection { margin-bottom:40px; }
+.subsection-title { font-size:20px; font-weight:600; margin-bottom:16px; color:var(--accent); padding-left:16px; border-left:3px solid var(--accent); }
+
+/* Cards */
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; margin-bottom:20px; }
+.card h4 { font-size:16px; margin-bottom:8px; color:var(--accent); }
+.card p { color:var(--text2); font-size:14px; }
+
+/* Grid */
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; }
+
+/* SVG container */
+.svg-wrap { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:24px; margin:20px 0; overflow-x:auto; text-align:center; }
+.svg-wrap svg { max-width:100%; height:auto; }
+.svg-caption { text-align:center; color:var(--text2); font-size:13px; margin-top:8px; }
+
+/* Table */
+.table-wrap { overflow-x:auto; margin:16px 0; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th { background:var(--bg3); color:var(--accent); padding:12px 16px; text-align:left; font-weight:600; border-bottom:2px solid var(--border); }
+td { padding:10px 16px; border-bottom:1px solid var(--border); color:var(--text2); }
+tr:hover td { background:rgba(108,140,255,.04); }
+
+/* Formula */
+.formula { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:16px 24px; margin:12px 0; font-family:'Courier New',monospace; font-size:15px; color:var(--accent3); text-align:center; }
+
+/* Tag */
+.tag { display:inline-block; padding:2px 10px; border-radius:12px; font-size:12px; font-weight:600; }
+.tag-blue { background:rgba(108,140,255,.15); color:var(--accent); }
+.tag-green { background:rgba(52,211,153,.15); color:var(--accent3); }
+.tag-yellow { background:rgba(245,158,11,.15); color:var(--accent4); }
+.tag-pink { background:rgba(244,114,182,.15); color:var(--accent5); }
+
+/* Collapsible */
+.collapse-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--card); border:1px solid var(--border); border-radius:10px; cursor:pointer; margin-bottom:8px; transition:all .2s; }
+.collapse-header:hover { border-color:var(--accent); }
+.collapse-header h4 { margin:0; font-size:16px; }
+.collapse-header .arrow { transition:transform .3s; color:var(--text2); font-size:14px; }
+.collapse-header.open .arrow { transform:rotate(180deg); }
+.collapse-body { max-height:0; overflow:hidden; transition:max-height .4s ease; }
+.collapse-body.open { max-height:3000px; }
+.collapse-inner { padding:16px 20px; background:var(--bg3); border:1px solid var(--border); border-top:none; border-radius:0 0 10px 10px; margin-top:-8px; margin-bottom:16px; }
+
+/* Pros/Cons */
+.pros-cons { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.pros, .cons { padding:20px; border-radius:10px; }
+.pros { background:rgba(52,211,153,.06); border:1px solid rgba(52,211,153,.2); }
+.cons { background:rgba(244,114,182,.06); border:1px solid rgba(244,114,182,.2); }
+.pros h5 { color:var(--accent3); margin-bottom:8px; }
+.cons h5 { color:var(--accent5); margin-bottom:8px; }
+.pros li, .cons li { font-size:14px; color:var(--text2); margin-bottom:4px; }
+
+/* Timeline */
+.timeline { position:relative; padding-left:32px; }
+.timeline::before { content:''; position:absolute; left:12px; top:0; bottom:0; width:2px; background:var(--grad1); }
+.timeline-item { position:relative; margin-bottom:28px; }
+.timeline-item::before { content:''; position:absolute; left:-24px; top:6px; width:12px; height:12px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px rgba(108,140,255,.4); }
+.timeline-item .year { font-size:13px; color:var(--accent); font-weight:700; }
+.timeline-item .title { font-size:16px; font-weight:600; margin:2px 0; }
+.timeline-item .desc { font-size:13px; color:var(--text2); }
+
+/* Highlight box */
+.highlight { background:linear-gradient(135deg, rgba(108,140,255,.08), rgba(167,139,250,.08)); border:1px solid rgba(108,140,255,.2); border-radius:10px; padding:20px; margin:16px 0; }
+.highlight h5 { color:var(--accent2); margin-bottom:8px; }
+
+/* Responsive */
+@media(max-width:900px) {
+  .nav { display:none; }
+  .main { margin-left:0; padding:20px; }
+  .grid2, .grid3, .pros-cons { grid-template-columns:1fr; }
+  .hero h1 { font-size:28px; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:var(--bg2); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+</style>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <h2>DeepSeek Harness 深度分析</h2>
+  <a href="#s1">1. 总览与脉络</a>
+  <a href="#s2">2. 核心原理</a>
+  <a class="sub" href="#s2-1">2.1 一切皆插件</a>
+  <a class="sub" href="#s2-2">2.2 能力接缝三角色</a>
+  <a class="sub" href="#s2-3">2.3 事件五模式</a>
+  <a class="sub" href="#s2-4">2.4 轮次与步骤</a>
+  <a href="#s3">3. 完整流程</a>
+  <a href="#s4">4. 模块详解</a>
+  <a class="sub" href="#s4-1">4.1 核心六包</a>
+  <a class="sub" href="#s4-2">4.2 Agent 句柄</a>
+  <a class="sub" href="#s4-3">4.3 事件目录</a>
+  <a href="#s5">5. 架构设计</a>
+  <a class="sub" href="#s5-1">5.1 四层组装</a>
+  <a class="sub" href="#s5-2">5.2 五个 profile</a>
+  <a class="sub" href="#s5-3">5.3 事件即扩展点</a>
+  <a href="#s6">6. 关键机制详解</a>
+  <a class="sub" href="#s6-1">6.1 三层嵌套循环</a>
+  <a class="sub" href="#s6-2">6.2 工具执行管线</a>
+  <a href="#s7">7. 多 agent 与编排</a>
+  <a href="#s8">8. 持久化与人工确认</a>
+  <a href="#s9">9. 优劣势与展望</a>
+</nav>
+
+<div class="main">
+
+<div class="hero">
+  <h1>DeepSeek Harness（dsh）深度分析</h1>
+  <p>一切皆插件的开源 agent 运行时：从事件驱动的插件内核，到 turn/step 三层循环、工具执行管线与 fail-closed 的持久化和审批体系</p>
+</div>
+<!-- ===== Section 1-3 ===== -->
+<div class="section" id="s1">
+  <div class="section-title"><span class="num">1</span> 总览与脉络</div>
+  <div class="section-desc">DeepSeek Harness（下称 dsh）是什么、从哪里来、为什么值得读。本节给出一句话定义、项目背景与演进脉络，以及三条核心价值主张；后续章节再逐层拆开它的原理与运行流程。</div>
+
+  <div class="highlight">
+    <h5>一句话理解 dsh</h5>
+    <p>dsh 是一个「无特权内核」的智能体运行框架：核心不内置任何不可替换的大脑或手脚，只定义服务接缝（能力接口的三角色契约）与事件扩展点；模型调用、工具执行、会话持久化全部由可插拔、可替换的插件提供，按 profile（随发行交付的具名组装）组装成 Web、Headless、SDK 等不同形态，并把一切事实写进 JSONL 事件日志。类比来说：如果大模型是发动机，agent harness 就是整车的底盘与总线——它不生产智能，而是把模型、工具、会话与配置组织成一个可运行、可替换零件的产品。</p>
+  </div>
+
+  <div class="subsection" id="s1-1">
+    <div class="subsection-title">1.1 背景与演进</div>
+    <p>dsh 由 DeepSeek AI 开发，是开源的 agent harness（智能体框架），构建于「一切皆插件」的架构之上，由 Cordis 驱动，其设计参见论文 <em>A Programming Paradigm for Spatiotemporal Composability</em>（arXiv:2608.25512）。项目当前处于<strong>开发者预览（Developer Preview）</strong>阶段，正在快速迭代，官方明确提示「未来将出现破坏兼容性的变更」，运行前须阅读 SAFETY.zh.md 安全说明。许可证为 MIT，bibtex 引用条目年份为 2026。</p>
+    <p>发行形态上，dsh 随发行提供 <strong>5 个 profile</strong>：<code>web</code>、<code>headless</code>、<code>sdk</code>、<code>sdk-minimal</code>、<code>acp</code>，每个 profile 是一份具名组装，列出自己叠放的组合包，决定这次启动装载哪些能力。双入口的启动方式：</p>
+    <div class="grid2">
+      <div class="card">
+        <span class="tag tag-blue">npx 一行启动</span>
+        <p><code>npx @deepseek-ai/dsh web</code> 默认在 <code>http://127.0.0.1:3080</code> 启动 Web UI，本机启动还会打开默认浏览器；传入 <code>--no-open</code> 仅运行服务器不打开页面。</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-green">源码运行</span>
+        <p><code>git clone → pnpm install → pnpm run build → pnpm dsh web</code>；开发时 <code>pnpm run dev:web</code> 在单终端内完成构建、启动，并在源码修改时重建 client bundle。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection" id="s1-2">
+    <div class="subsection-title">1.2 脉络时间线</div>
+    <div class="svg-wrap">
+      <svg viewBox="0 0 900 320" font-family="-apple-system, 'Segoe UI', sans-serif">
+        <defs>
+          <marker id="tl-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6c8cff"/>
+          </marker>
+        </defs>
+        <!-- axis -->
+        <line x1="60" y1="170" x2="850" y2="170" stroke="#6c8cff" stroke-width="2" marker-end="url(#tl-arrow)"/>
+        <!-- node 1 -->
+        <circle cx="120" cy="170" r="7" fill="#6c8cff"/>
+        <rect x="60" y="50" width="180" height="76" rx="10" fill="#1e2030" stroke="#6c8cff" stroke-width="1.5"/>
+        <text x="150" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">Cordis 架构命题</text>
+        <text x="150" y="96" text-anchor="middle" font-size="11" fill="#9ca0b0">一切皆插件，由 Cordis 驱动</text>
+        <text x="150" y="113" text-anchor="middle" font-size="11" fill="#9ca0b0">论文 arXiv:2608.25512</text>
+        <line x1="120" y1="126" x2="120" y2="163" stroke="#6c8cff" stroke-width="1.5"/>
+        <!-- node 2 -->
+        <circle cx="305" cy="170" r="7" fill="#a78bfa"/>
+        <rect x="225" y="206" width="180" height="76" rx="10" fill="#1e2030" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="315" y="232" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">5 个 profile 组装</text>
+        <text x="315" y="252" text-anchor="middle" font-size="11" fill="#9ca0b0">web / headless / sdk</text>
+        <text x="315" y="269" text-anchor="middle" font-size="11" fill="#9ca0b0">sdk-minimal / acp</text>
+        <line x1="305" y1="177" x2="305" y2="206" stroke="#a78bfa" stroke-width="1.5"/>
+        <!-- node 3 -->
+        <circle cx="490" cy="170" r="7" fill="#34d399"/>
+        <rect x="410" y="50" width="180" height="76" rx="10" fill="#1e2030" stroke="#34d399" stroke-width="1.5"/>
+        <text x="500" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">事件即扩展点</text>
+        <text x="500" y="96" text-anchor="middle" font-size="11" fill="#9ca0b0">会话 / agent/* / 能力事件</text>
+        <text x="500" y="113" text-anchor="middle" font-size="11" fill="#9ca0b0">三域五模式分发</text>
+        <line x1="490" y1="126" x2="490" y2="163" stroke="#34d399" stroke-width="1.5"/>
+        <!-- node 4 -->
+        <circle cx="675" cy="170" r="7" fill="#f59e0b"/>
+        <rect x="595" y="206" width="180" height="76" rx="10" fill="#1e2030" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="685" y="232" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">JSONL 格式 v4 已发布</text>
+        <text x="685" y="252" text-anchor="middle" font-size="11" fill="#9ca0b0">证据标签 dsh-v0.2.0-rc.2</text>
+        <text x="685" y="269" text-anchor="middle" font-size="11" fill="#9ca0b0">v0 用 session.jsonl[.zstd]</text>
+        <line x1="675" y1="177" x2="675" y2="206" stroke="#f59e0b" stroke-width="1.5"/>
+        <!-- node 5 -->
+        <circle cx="830" cy="170" r="7" fill="#f472b6"/>
+        <rect x="740" y="50" width="150" height="76" rx="10" fill="#1e2030" stroke="#f472b6" stroke-width="1.5"/>
+        <text x="815" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">开发者预览</text>
+        <text x="815" y="96" text-anchor="middle" font-size="11" fill="#9ca0b0">2026 · MIT 许可</text>
+        <text x="815" y="113" text-anchor="middle" font-size="11" fill="#9ca0b0">破坏兼容变更预告</text>
+        <line x1="815" y1="126" x2="815" y2="163" stroke="#f472b6" stroke-width="1.5"/>
+        <text x="60" y="305" font-size="11" fill="#9ca0b0">注：除 2026 外不标注具体年份；节点均取自仓库文档与发布记录，未标注日期者仅表示逻辑先后。</text>
+      </svg>
+    </div>
+    <div class="svg-caption">图1：dsh 架构命题到开发者预览的脉络时间线（节点均来自 README、架构文档与 Session 格式发布记录）</div>
+  </div>
+
+  <div class="subsection" id="s1-3">
+    <div class="subsection-title">1.3 核心价值</div>
+    <div class="grid3">
+      <div class="card">
+        <span class="tag tag-blue">无特权内核</span>
+        <p>核心没有不可替换的「特权代码」，一切皆可由 patch（配置补丁）替换；连 HMR（热模块替换）也是按 profile 装载的插件——base 启用 dsh-hmr，Headless/SDK/ACP 禁用，sdk-minimal 干脆不含。</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-green">事件即扩展点</span>
+        <p>新行为不改内核循环，而是监听事件：会话事件、agent/* 与能力事件（fs/*、tools/*、telemetry/*）构成三域，waterfall、bail 等五种分发模式覆盖改写与拦截场景。</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-yellow">注册是可逆副作用</span>
+        <p>一切贡献都经 <code>ctx.effect()</code> / <code>ctx.on()</code> 注册，注册被撤销即插件卸载；加载顺序由服务依赖表达而非手动编排，因此拆卸天然安全。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="s2">
+  <div class="section-title"><span class="num">2</span> 核心原理</div>
+  <div class="section-desc">dsh 的四条地基：一切皆插件的装配模型、capability seam（能力接缝）的三角色契约、事件的五种分发模式，以及轮次与步骤的运行语义。理解这四条，后面读配置层与 agent-loop 源码都会顺很多。</div>
+
+  <div class="subsection" id="s2-1">
+    <div class="subsection-title">2.1 一切皆插件与无特权内核</div>
+    <p>dsh 构建于「一切皆插件」架构：插件是实现 Service（服务）的对象，上下文（context）是服务容器，服务占稳定的 <code>ctx.&lt;key&gt;</code> 槽位（如 <code>ctx.tools</code>、<code>ctx.llm</code>、<code>ctx.sessions</code>），依赖通过 <code>inject</code> 声明，加载顺序由依赖关系表达而非手动编排。核心包共 7 个（core/session、system-prompt、tools、agent、agent-loop、scope、llm/llm），它们同样以插件身份装载——<strong>没有特权内核，一切可由 patch 替换</strong>。</p>
+    <p>配置合成按固定优先级分层，共 4 层：profile 组合包 → <code>cordis.patch.yml</code> → home patch → <code>--patch</code> overlay（细节见第 5 节）。可用 <code>dsh --profile web --dump-config</code> 打印最终配置树，验证哪一层覆盖了哪一项。因为注册皆为副作用，插件被卸载时其注册自动被撤销——这是「可替换」在运行时的另一半含义。</p>
+  </div>
+
+  <div class="subsection" id="s2-2">
+    <div class="subsection-title">2.2 capability seam：三角色契约</div>
+    <p>capability seam（能力接缝）是 dsh 拆分可替换能力的标准单位，由三个角色构成，缺一不可：<strong>Service Definition</strong>（服务定义，声明接口与语义）、<strong>Provider</strong>（提供者，给出实现）、<strong>Consumer</strong>（消费者，按接口调用）。以 <code>packages/shell</code> 为例：<code>dsh-shell</code> 是 Definition，<code>dsh-bash-local</code> / <code>dsh-bash-sandbox</code> 是其中可互换的 Provider，<code>dsh-tool-bash</code> 是 Consumer——换 Provider 不动 Consumer，正是接缝的意义。</p>
+    <div class="svg-wrap">
+      <svg viewBox="0 0 700 300" font-family="-apple-system, 'Segoe UI', sans-serif">
+        <defs>
+          <marker id="seam-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6c8cff"/>
+          </marker>
+          <marker id="seam-arrow-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#34d399"/>
+          </marker>
+        </defs>
+        <!-- Definition -->
+        <rect x="260" y="28" width="180" height="64" rx="10" fill="#1e2030" stroke="#6c8cff" stroke-width="1.5"/>
+        <text x="350" y="54" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">Service Definition</text>
+        <text x="350" y="74" text-anchor="middle" font-size="11" fill="#9ca0b0">dsh-shell · 声明接口</text>
+        <!-- Provider -->
+        <rect x="50" y="200" width="210" height="64" rx="10" fill="#1e2030" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="155" y="226" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">Provider</text>
+        <text x="155" y="246" text-anchor="middle" font-size="11" fill="#9ca0b0">dsh-bash-local / dsh-bash-sandbox</text>
+        <!-- Consumer -->
+        <rect x="440" y="200" width="210" height="64" rx="10" fill="#1e2030" stroke="#34d399" stroke-width="1.5"/>
+        <text x="545" y="226" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">Consumer</text>
+        <text x="545" y="246" text-anchor="middle" font-size="11" fill="#9ca0b0">dsh-tool-bash · 按接口调用</text>
+        <!-- edges -->
+        <line x1="300" y1="92" x2="200" y2="193" stroke="#6c8cff" stroke-width="1.5" marker-end="url(#seam-arrow)"/>
+        <text x="218" y="140" font-size="11" fill="#9ca0b0">实现</text>
+        <line x1="400" y1="92" x2="500" y2="193" stroke="#6c8cff" stroke-width="1.5" marker-end="url(#seam-arrow)"/>
+        <text x="472" y="140" font-size="11" fill="#9ca0b0">调用</text>
+        <line x1="262" y1="232" x2="436" y2="232" stroke="#34d399" stroke-width="1.5" marker-end="url(#seam-arrow-g)"/>
+        <text x="350" y="222" text-anchor="middle" font-size="11" fill="#9ca0b0">经 seam 调用（换 Provider 不动 Consumer）</text>
+        <text x="350" y="290" text-anchor="middle" font-size="11" fill="#9ca0b0">范例：packages/shell 的 shell 执行能力</text>
+      </svg>
+    </div>
+    <div class="svg-caption">图2：capability seam 三角色关系（以 packages/shell 为例）</div>
+  </div>
+
+  <div class="subsection" id="s2-3">
+    <div class="subsection-title">2.3 事件五种分发模式</div>
+    <p>事件就是 dsh 的扩展点，一次注册通过 <code>@mode</code> 标签声明分发模式，共 5 种：</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>模式</th><th>语义</th></tr>
+        <tr><td><code>emit</code></td><td>广播通知，逐个通知监听者，用于「发生了某事」。</td></tr>
+        <tr><td><code>waterfall</code></td><td>链式改写：监听者签名是 <code>(...args, next)</code>，依次改造共享参数，<strong>必须调用 <code>next()</code></strong> 才把控制权交给下一位。</td></tr>
+        <tr><td><code>parallel</code></td><td>并行执行全部监听者，互不等待彼此的完成顺序。</td></tr>
+        <tr><td><code>serial</code></td><td>串行执行监听者，按注册顺序逐个完成。</td></tr>
+        <tr><td><code>bail</code></td><td>短路返回：停在首个 bail 值，后续监听者不再执行。</td></tr>
+      </table>
+    </div>
+    <p>两条硬规则：<strong>waterfall 监听器必须调用 <code>next()</code></strong>——不调用即短路整条链；而对单决策事件（如拒绝/通过）而言，短路本身是设计意图。配套纪律是：每个注册都应有对应的 disposer（资源释放函数）；拦截类需求优先走事件，直接能力调用优先走服务方法。</p>
+  </div>
+
+  <div class="subsection" id="s2-4">
+    <div class="subsection-title">2.4 轮次与步骤语义</div>
+    <p>dsh 把一次会话运行切成两层：<strong>轮次（turn）</strong>是一次「排空已接纳输入」的过程，包含<strong>零或多个步骤</strong>；<strong>步骤（step）</strong>等于<strong>一次模型请求 + 其工具</strong>。因此「模型答完但没调工具」是恰好一个步骤的轮次，「拒绝或空批次」则可以是零步骤的轮次。轮次之外，交互段由真人输入轮次界定。这三个词在后文的事件名（<code>turn/start</code>、<code>step/end</code>）里会反复出现。</p>
+  </div>
+</div>
+
+<div class="section" id="s3">
+  <div class="section-title"><span class="num">3</span> 完整流程</div>
+  <div class="section-desc">从 followup 进入 inbox 到 turn/end 收束，一个轮次端到端经过哪些事件、每一步数据如何变化、失败走哪条路。本节是理解 agent-loop 源码的地图。</div>
+
+  <div class="subsection" id="s3-1">
+    <div class="subsection-title">3.1 双平面原则</div>
+    <div class="highlight">
+      <h5>持久回放看 session/event，实时协调看 agent/*</h5>
+      <p>dsh 把事件分成两个平面：<strong>持久回放事实</strong>记在 <code>session/event</code>（会话事件），供回放、审计与 SDK 重建 transcript；<strong>实时控制与状态</strong>走 <code>agent/*</code> 域，只服务当前运行的协调。规则很硬：SDK 要回放 transcript 应消费 <code>session/event</code>，<code>agent/*</code> 仅作实时协调——把实时事件当历史真源读会得到不完整的账本。</p>
+    </div>
+  </div>
+
+  <div class="subsection" id="s3-2">
+    <div class="subsection-title">3.2 端到端生命周期</div>
+    <div class="svg-wrap">
+      <svg viewBox="0 0 900 400" font-family="-apple-system, 'Segoe UI', sans-serif">
+        <defs>
+          <marker id="fl-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6c8cff"/>
+          </marker>
+          <marker id="fl-arrow-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b"/>
+          </marker>
+        </defs>
+        <!-- row 1 -->
+        <rect x="20" y="30" width="150" height="52" rx="8" fill="#1e2030" stroke="#6c8cff" stroke-width="1.5"/>
+        <text x="95" y="52" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">followup → inbox</text>
+        <text x="95" y="70" text-anchor="middle" font-size="11" fill="#9ca0b0">agent/inbox/spliced</text>
+
+        <line x1="170" y1="56" x2="196" y2="56" stroke="#6c8cff" stroke-width="1.5" marker-end="url(#fl-arrow)"/>
+
+        <rect x="200" y="30" width="130" height="52" rx="8" fill="#1e2030" stroke="#6c8cff" stroke-width="1.5"/>
+        <text x="265" y="52" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">turn/start</text>
+        <text x="265" y="70" text-anchor="middle" font-size="11" fill="#9ca0b0">kick: while(turn())</text>
+
+        <line x1="330" y1="56" x2="356" y2="56" stroke="#6c8cff" stroke-width="1.5" marker-end="url(#fl-arrow)"/>
+
+        <rect x="360" y="30" width="200" height="52" rx="8" fill="#1e2030" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="460" y="52" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">preStep 四连</text>
+        <text x="460" y="70" text-anchor="middle" font-size="11" fill="#9ca0b0">claim → resolve → assemble → pre-step</text>
+
+        <line x1="560" y1="56" x2="586" y2="56" stroke="#6c8cff" stroke-width="1.5" marker-end="url(#fl-arrow)"/>
+
+        <rect x="590" y="30" width="120" height="52" rx="8" fill="#1e2030" stroke="#6c8cff" stroke-width="1.5"/>
+        <text x="650" y="52" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">step/start</text>
+        <text x="650" y="70" text-anchor="middle" font-size="11" fill="#9ca0b0">agent/request</text>
+
+        <line x1="710" y1="56" x2="736" y2="56" stroke="#6c8cff" stroke-width="1.5" marker-end="url(#fl-arrow)"/>
+
+        <rect x="740" y="30" width="140" height="52" rx="8" fill="#1e2030" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="810" y="52" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">LLM 流式</text>
+        <text x="810" y="70" text-anchor="middle" font-size="11" fill="#9ca0b0">llm/stream</text>
+
+        <!-- bypass annotation -->
+        <rect x="360" y="106" width="350" height="40" rx="8" fill="#1e2030" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="535" y="124" text-anchor="middle" font-size="12" font-weight="bold" fill="#f59e0b">旁路：reject 或空批次</text>
+        <text x="535" y="140" text-anchor="middle" font-size="11" fill="#9ca0b0">不消耗模型调用；空批次 completed、reject blocked 收轮</text>
+        <path d="M 460 82 L 460 106" stroke="#f59e0b" stroke-width="1.5" fill="none" marker-end="url(#fl-arrow-o)"/>
+
+        <!-- connector down from LLM to row 2 -->
+        <path d="M 810 82 L 810 118 L 60 118 L 60 208" stroke="#6c8cff" stroke-width="1.5" fill="none" marker-end="url(#fl-arrow)"/>
+
+        <!-- row 2 -->
+        <rect x="20" y="212" width="160" height="52" rx="8" fill="#1e2030" stroke="#34d399" stroke-width="1.5"/>
+        <text x="100" y="234" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">assistant/message</text>
+        <text x="100" y="252" text-anchor="middle" font-size="11" fill="#9ca0b0">无 tool-call → completed</text>
+
+        <line x1="180" y1="238" x2="206" y2="238" stroke="#6c8cff" stroke-width="1.5" marker-end="url(#fl-arrow)"/>
+
+        <rect x="210" y="212" width="170" height="52" rx="8" fill="#1e2030" stroke="#34d399" stroke-width="1.5"/>
+        <text x="295" y="234" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">工具批次 (barrier)</text>
+        <text x="295" y="252" text-anchor="middle" font-size="11" fill="#9ca0b0">有界滚动池 · 默认并行 10</text>
+
+        <line x1="380" y1="238" x2="406" y2="238" stroke="#6c8cff" stroke-width="1.5" marker-end="url(#fl-arrow)"/>
+
+        <rect x="410" y="212" width="130" height="52" rx="8" fill="#1e2030" stroke="#6c8cff" stroke-width="1.5"/>
+        <text x="475" y="234" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">step/end</text>
+        <text x="475" y="252" text-anchor="middle" font-size="11" fill="#9ca0b0">completed / max-tokens</text>
+
+        <line x1="540" y1="238" x2="566" y2="238" stroke="#6c8cff" stroke-width="1.5" marker-end="url(#fl-arrow)"/>
+
+        <rect x="570" y="212" width="150" height="52" rx="8" fill="#1e2030" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="645" y="234" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">agent/turn-stopping</text>
+        <text x="645" y="252" text-anchor="middle" font-size="11" fill="#9ca0b0">自然停止且 next-step 空</text>
+
+        <line x1="720" y1="238" x2="746" y2="238" stroke="#6c8cff" stroke-width="1.5" marker-end="url(#fl-arrow)"/>
+
+        <rect x="750" y="212" width="130" height="52" rx="8" fill="#1e2030" stroke="#f472b6" stroke-width="1.5"/>
+        <text x="815" y="234" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e8">turn/end</text>
+        <text x="815" y="252" text-anchor="middle" font-size="11" fill="#9ca0b0">排空后 status → idle</text>
+
+        <!-- loop back -->
+        <path d="M 815 264 L 815 310 L 100 310 L 100 270" stroke="#a78bfa" stroke-width="1.5" fill="none" stroke-dasharray="5 4" marker-end="url(#fl-arrow)"/>
+        <text x="460" y="302" text-anchor="middle" font-size="11" fill="#9ca0b0">kick 层 while (await turn()) 循环：下一批 inbox 输入继续开新轮次</text>
+
+        <text x="20" y="350" font-size="11" fill="#9ca0b0">取消是协作式的：phase.abort.signal.aborted 使 turn 转 aborted；被取消的流以 interrupted:true 锚保存已送达前缀；</text>
+        <text x="20" y="368" font-size="11" fill="#9ca0b0">未派发的工具调用在后续历史中出现 ABORTED_BEFORE_DISPATCH 合成结果。</text>
+        <text x="20" y="388" font-size="11" fill="#9ca0b0">输入路由：followup → next-turn + 唤醒；steer → next-step + 唤醒；inject → next-step 不唤醒；取消 → cancel。</text>
+      </svg>
+    </div>
+    <div class="svg-caption">图3：一个轮次的端到端流程（followup 入 inbox 到 turn/end，含拒绝/空批次旁路与 kick 层循环）</div>
+  </div>
+
+  <div class="subsection" id="s3-3">
+    <div class="subsection-title">3.3 每步数据变化与失败路径</div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>阶段</th><th>落日志事件</th><th>关键动作</th><th>失败路径</th></tr>
+        <tr>
+          <td>输入接纳</td>
+          <td><code>agent/inbox/spliced</code></td>
+          <td>每次 inbox 变更即提交；followup 唤醒 kick、steer 走 next-step、inject 不唤醒</td>
+          <td>取消为协作式，原因仅 user|parent|disposed|hook</td>
+        </tr>
+        <tr>
+          <td>轮次启动</td>
+          <td><code>turn/start</code> → 认领删除落 <code>agent/inbox/spliced</code></td>
+          <td>排空已接纳输入，认领另发实时 <code>agent/inbox/claimed</code>；kick 层 <code>while (await this.turn()) {}</code></td>
+          <td>phase.abort.signal.aborted → turn 转 aborted 终止</td>
+        </tr>
+        <tr>
+          <td>步骤准备 preStep</td>
+          <td>（经 <code>session/event</code> 记录）</td>
+          <td>inbox.claim → tools.resolve → systemPrompt.assemble → <code>agent/pre-step</code> waterfall</td>
+          <td>reject 或空批次：<strong>不消耗模型调用</strong>；首步消息为空直接 completed 收轮</td>
+        </tr>
+        <tr>
+          <td>请求组装</td>
+          <td><code>step/start</code>、<code>request/header</code>（<code>agent/request</code> 为实时 waterfall）</td>
+          <td>准入 system/user message；header 理由 initial|resume|change|series；工具增删发 developer/message</td>
+          <td>request waterfall 中改 provider/model/effort 抛错拒绝该步；<code>agent/request-error</code> 可 retry 且不重复组装/pre-step/用户准入</td>
+        </tr>
+        <tr>
+          <td>模型流式</td>
+          <td><code>assistant/message</code></td>
+          <td>AssistantStreamAttempt 流式接收；无 tool-call 返回 completed</td>
+          <td>取消 → interrupted:true 锚；未派发工具 → ABORTED_BEFORE_DISPATCH 合成结果</td>
+        </tr>
+        <tr>
+          <td>工具批次</td>
+          <td><code>tool/call</code> · <code>tool/result</code>（策略走能力域 <code>tools/*</code>）</td>
+          <td>按 executionMode 分类，barrier + 有界滚动池；maxParallelToolCalls 默认 10，1 表示串行，运行时读取对下一批生效</td>
+          <td>工具失败由 ToolCallRecovery 补记未决 tool/result；依赖兄弟比较的调用必须独占</td>
+        </tr>
+        <tr>
+          <td>收束</td>
+          <td><code>step/end</code> → <code>turn/end</code>（其间 serial 的 <code>agent/turn-stopping</code> 为实时事件）</td>
+          <td>StepEndReason 为 completed|max-tokens；自然停止且 next-step 空时跑 turn-stopping，驱动器排空后 status → idle</td>
+          <td>无内置轮次预算，限流须靠 <code>agent/turn-stopping</code> 扩展点</td>
+        </tr>
+      </table>
+    </div>
+    <p>三条容易踩的语义补充：<strong>①</strong> 用户消息只在 first attempt 准入一次，retry 不会重复塞入；<strong>②</strong> prompt 在 in-history 路由上的非空变更被追加而非改写，缓存前缀因此保留、仅后缀失效；<strong>③</strong> 每步请求都由派生历史 + 可见工具 schema 组成，所有被接受的事实先落日志再派生下一步——「日志是真源」在 loop 层的直接体现。compaction-basic（上下文压缩）正是经 <code>agent/pre-step</code> 处理历史压力的插件化例子。</p>
+  </div>
+</div>
+<!-- ============ 第4节 模块详解 ============ -->
+<div class="section" id="s4">
+  <div class="section-title"><span class="num">4</span> 模块详解</div>
+  <div class="section-desc">本节按包拆开 dsh 的主干：六个核心包如何分工、Agent 句柄如何对外暴露、事件目录如何组织。所有行号与事件名均取自仓库文档原文。</div>
+
+  <div class="subsection" id="s4-1">
+    <h3>4.1 核心六包主干</h3>
+    <p>core 子系统由六个主干包构成：<code>session</code>、<code>system-prompt</code>、<code>tools</code>、<code>agent</code>、<code>agent-loop</code>、<code>scope</code>（docs/subsystems/core.zh.md 行 9-20）。加载顺序由服务依赖表达；其中 <strong>scope 是唯一非服务包</strong>——零依赖库，位于 session/ 与 system-prompt/ 之下被它们消费而不形成环（行 20）。</p>
+    <ul>
+      <li><strong>session</strong> — 会话持久层。Session 仅追加日志，承载十三种核心事件（行 426）；<code>deriveMessages()</code> 从日志派生模型可见历史；<code>TurnBoundaryProjection</code> 提供轮次边界的四字段投影（行 501-510）。JSONL v0 文件名为 <code>session.jsonl[.zstd]</code>，v1+ 为 <code>session.vN.jsonl[.zstd]</code>（architecture.zh.md 行 130）。</li>
+      <li><strong>system-prompt</strong> — 系统提示词组装：提示词片段与工具 schema 的组装（architecture.zh.md 行 60；core.zh.md 行 14）。</li>
+      <li><strong>tools</strong> — 工具注册与执行策略层。<code>schemas()</code> 只向模型投影 name/description/parameters，timeoutMs、isConcurrencySafe、presentCall 不泄漏给模型（subsystems/tools.zh.md 行 11、66）；条件准入 <code>when</code> 经 <code>ctx.tools.resolve()</code> 每步解析（行 182）。</li>
+      <li><strong>agent</strong> — Agent 抽象与句柄层。定义 Agent 接口（cancel/whenIdle/runMaintenance/send）与 <code>AgentHandle={agent,dispose()}</code>（行 45-48、65-120）。</li>
+      <li><strong>agent-loop</strong> — 循环实现层。实现 <code>AgentFactory</code> 并注册到 <code>ctx.agents</code>（agent-loop/README.md 行 89）；index.ts 中 <code>AgentLoop implements AgentFactory</code>（:291），inject 六项（:292），<code>maxParallelToolCalls</code> schema default=10（constants.ts:6，:296）。</li>
+      <li><strong>scope</strong> — 唯一非服务包，不以 Service 形态参与容器。</li>
+    </ul>
+    <p>架构文档把 <code>llm/llm</code> 与上述六包并列为 7 个核心包（architecture.zh.md 行 57-65），本文依 core.zh.md 的「主干六包」口径单列，<strong>llm 作为第 7 包合并说明</strong>：它负责模型请求侧能力，被 agent-loop 的 prepareRequest/buildRequest/流式路径消费；架构表给它的职责是「消息与流式词汇表，以及适配器 seam」（行 65）。</p>
+    <div class="svg-wrap">
+      <svg viewBox="0 0 600 400">
+        <rect x="0" y="0" width="600" height="400" rx="10" fill="#1e2030" stroke="#2a2d42"/>
+        <text x="300" y="30" text-anchor="middle" fill="#e0e0e8" font-size="14" font-weight="bold">核心六包 + llm · ctx 键</text>
+
+        <!-- 中心 agent-loop -->
+        <rect x="230" y="165" width="140" height="70" rx="8" fill="#1e2030" stroke="#6c8cff" stroke-width="2"/>
+        <text x="300" y="193" text-anchor="middle" fill="#6c8cff" font-size="13" font-weight="bold">agent-loop</text>
+        <text x="300" y="215" text-anchor="middle" fill="#9ca0b0" font-size="11">ctx.agentLoop · ctx.agents</text>
+
+        <!-- 环形六包 -->
+        <rect x="60" y="60" width="130" height="60" rx="8" fill="#1e2030" stroke="#a78bfa"/>
+        <text x="125" y="85" text-anchor="middle" fill="#a78bfa" font-size="13" font-weight="bold">session</text>
+        <text x="125" y="105" text-anchor="middle" fill="#9ca0b0" font-size="11">追加日志 · 十三核心事件</text>
+
+        <rect x="235" y="60" width="130" height="60" rx="8" fill="#1e2030" stroke="#34d399"/>
+        <text x="300" y="85" text-anchor="middle" fill="#34d399" font-size="13" font-weight="bold">system-prompt</text>
+        <text x="300" y="105" text-anchor="middle" fill="#9ca0b0" font-size="11">系统提示词组装</text>
+
+        <rect x="410" y="60" width="130" height="60" rx="8" fill="#1e2030" stroke="#f59e0b"/>
+        <text x="475" y="85" text-anchor="middle" fill="#f59e0b" font-size="13" font-weight="bold">tools</text>
+        <text x="475" y="105" text-anchor="middle" fill="#9ca0b0" font-size="11">ctx.tools · resolve/执行</text>
+
+        <rect x="410" y="260" width="130" height="60" rx="8" fill="#1e2030" stroke="#f472b6"/>
+        <text x="475" y="285" text-anchor="middle" fill="#f472b6" font-size="13" font-weight="bold">agent</text>
+        <text x="475" y="305" text-anchor="middle" fill="#9ca0b0" font-size="11">AgentHandle · send 别名</text>
+
+        <rect x="235" y="260" width="130" height="60" rx="8" fill="#1e2030" stroke="#22d3ee"/>
+        <text x="300" y="285" text-anchor="middle" fill="#22d3ee" font-size="13" font-weight="bold">scope</text>
+        <text x="300" y="305" text-anchor="middle" fill="#9ca0b0" font-size="11">唯一非服务包</text>
+
+        <rect x="60" y="260" width="130" height="60" rx="8" fill="#1e2030" stroke="#6c8cff"/>
+        <text x="125" y="285" text-anchor="middle" fill="#6c8cff" font-size="13" font-weight="bold">llm（第7包）</text>
+        <text x="125" y="305" text-anchor="middle" fill="#9ca0b0" font-size="11">模型请求侧</text>
+
+        <!-- 连线 -->
+        <line x1="190" y1="90" x2="255" y2="165" stroke="#2a2d42"/>
+        <line x1="300" y1="120" x2="300" y2="165" stroke="#2a2d42"/>
+        <line x1="410" y1="90" x2="345" y2="165" stroke="#2a2d42"/>
+        <line x1="410" y1="290" x2="345" y2="235" stroke="#2a2d42"/>
+        <line x1="300" y1="260" x2="300" y2="235" stroke="#2a2d42"/>
+        <line x1="190" y1="290" x2="255" y2="235" stroke="#2a2d42"/>
+
+        <text x="300" y="375" text-anchor="middle" fill="#9ca0b0" font-size="11">扩展插件只依赖 agent，绝不依赖 agent-loop → 循环可替换</text>
+      </svg>
+    </div>
+    <div class="svg-caption">图4：核心六包与 llm 第 7 包的 ctx 键关系（环形）</div>
+  </div>
+
+  <div class="subsection" id="s4-2">
+    <h3>4.2 Agent 句柄与接口</h3>
+    <p>对外暴露的最小单元是 <code>AgentHandle = { agent, dispose() }</code>（core.zh.md 行 45-48）。<code>Agent</code> 接口的核心方法是 <code>cancel</code>、<code>whenIdle</code>、<code>runMaintenance</code>、<code>send</code>；其中 <code>followup</code>、<code>steer</code>、<code>inject</code> 是 <code>send</code> 的别名（行 59、65-146）。在 agent.ts 中这三者与 cancel 一起按路由分发（agent.ts :179-191）。</p>
+    <p><strong>可替换性的关键约束</strong>：扩展插件只依赖 <code>agent</code> 包、绝不依赖 <code>agent-loop</code>，因此循环实现可以整体替换（core.zh.md 行 20）。循环对外经 <code>ctx.agentLoop</code> 提供 <code>create / createAgent / resume</code>（行 548-584；index.ts :668/:717/:754），并以 <code>AgentFactory</code> 身份注册到 <code>ctx.agents</code>（agent-loop/README.md 行 89）。</p>
+    <p>恢复语义由 index.ts 固定顺序保证：persistence.open 拿 write 独占 → 冷读 → interruptedTurnClosers → sessions.prepare（:789-804）；拆除按逆序五步执行并以 AggregateError 汇总（:498-545），另有三个 owner 融合的 AbortController（:473-486）。</p>
+  </div>
+
+  <div class="subsection" id="s4-3">
+    <h3>4.3 事件目录</h3>
+    <p>架构文档把事件划分为<strong>三域</strong>（architecture.zh.md 行 73-75）：</p>
+    <ul>
+      <li><strong>会话事件</strong> — 以 <code>session/event</code> 为轴，Session 仅追加日志并承载十三种核心事件（core.zh.md 行 426）；<code>session/event</code> 的监听者最多，32 个包（event-producer-consumer.zh.md 行 77）。</li>
+      <li><strong>agent/*</strong> — 实时协调域，用于轮次/步骤级协作（如 <code>agent/pre-step</code>、<code>agent/turn-stopping</code>、<code>agent/request-error</code>、<code>agent/inbox/inserted</code>；其中 <code>agent/inbox/spliced</code> 是入日志的会话事件，不属实时域）。</li>
+      <li><strong>能力事件</strong> — <code>fs/*</code>、<code>tools/*</code>、<code>telemetry/*</code> 三个前缀（行 73-75）。</li>
+    </ul>
+    <p>事件是多对多关系，所以官方用表格而非大型关系图来描述（event-producer-consumer.zh.md 行 8）；应用级监听者不在包矩阵内（行 10）。生成矩阵覆盖 emit/serial/waterfall/parallel 四种模式的产出（行 13）——注意此处列四模式，而 cordis 入门文档列五模式（emit/waterfall/parallel/serial/bail，cordis-primer.zh.md 行 21-27），二者口径不同，前者是「生成」矩阵。</p>
+    <p><strong>事件即扩展点</strong>：文档明确「选对事件域是大多数改动的第一个决定」（architecture.zh.md 行 71）。典型高频事件：<code>agent/pre-step</code> waterfall 有 18 个包监听（行 24）；<code>tools/pre-execute</code>、<code>tools/execute</code>、<code>tools/post-execute</code> 均为 waterfall，由 tools 包派发（行 88-90）；<code>tools/result</code> emit 的监听者含 subagent、tool-present、ui-trajectory（行 92）。</p>
+  </div>
+</div>
+
+<!-- ============ 第5节 架构设计 ============ -->
+<div class="section" id="s5">
+  <div class="section-title"><span class="num">5</span> 架构设计</div>
+  <div class="section-desc">dsh 的「无特权内核、一切可 patch」哲学落在两处：四层 patch 组装出运行配置，事件三域承载全部扩展行为。</div>
+
+  <div class="subsection" id="s5-1">
+    <h3>5.1 四层 patch 组装</h3>
+    <p>dsh 没有特权内核，一切可 patch（architecture.zh.md 行 11）。配置按四层优先级从低到高叠加（行 25）：</p>
+    <ol>
+      <li><strong>profile 组合包</strong> — 所选 profile 自带的默认组合；</li>
+      <li><strong>cordis.patch.yml</strong> — 项目级 patch 文件；</li>
+      <li><strong>home patch</strong> — 用户主目录级 patch；</li>
+      <li><strong>--patch overlay</strong> — 命令行传入的覆盖层，优先级最高。</li>
+    </ol>
+    <p>可用 <code>dsh --profile web --dump-config</code> 查看组装后的最终配置（行 34）。</p>
+    <p><strong>HMR 分布</strong>（行 27）：base 启用 <code>dsh-hmr</code>；Headless、SDK、ACP 三个 profile 禁用它；sdk-minimal 则根本不包含 dsh-hmr。</p>
+  </div>
+
+  <div class="subsection" id="s5-2">
+    <h3>5.2 五个 profile 对照</h3>
+    <p>共 5 个 profile：web、headless、sdk、sdk-minimal、acp（architecture.zh.md 行 17、43）。对照表见下方折叠面板（展开即完整表格）。</p>
+
+    <div class="collapse-header" onclick="toggleCollapse(this)">
+      <h4>五个 profile 对照表（HMR 状态 · 用途）</h4>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="collapse-body">
+      <div class="collapse-inner">
+        <div class="table-wrap">
+          <table>
+            <tr><th>Profile</th><th>HMR（dsh-hmr）</th><th>备注</th></tr>
+            <tr><td>web</td><td><span class="tag">启用</span>（base 启用）</td><td>base 组合包继承启用状态</td></tr>
+            <tr><td>headless</td><td><span class="tag">禁用</span></td><td>Headless 显式禁用 HMR</td></tr>
+            <tr><td>sdk</td><td><span class="tag">禁用</span></td><td>SDK 显式禁用 HMR</td></tr>
+            <tr><td>sdk-minimal</td><td><span class="tag">不含</span></td><td>最小 SDK，不包含 dsh-hmr</td></tr>
+            <tr><td>acp</td><td><span class="tag">禁用</span></td><td>ACP 显式禁用 HMR</td></tr>
+          </table>
+        </div>
+        <p class="note">组合包差异（architecture.zh.md 行 23）：web / headless / sdk / acp 共享 dsh-base 第一层；dsh-web-app 增加浏览器应用，dsh-headless 增加不带服务器的一次性运行器，dsh-sdk-app 增加 SDK JSON-RPC 服务器，dsh-acp-app 增加仅用于自动化的 ACP 服务器；sdk-minimal 是刻意保留的例外，不应用 dsh-base。</p>
+      </div>
+    </div>
+
+    <div class="svg-wrap">
+      <svg viewBox="0 0 400 500">
+        <rect x="0" y="0" width="400" height="500" rx="10" fill="#1e2030" stroke="#2a2d42"/>
+        <text x="200" y="30" text-anchor="middle" fill="#e0e0e8" font-size="14" font-weight="bold">四层 patch 组装（优先级 ↑）</text>
+
+        <!-- L1 profile -->
+        <rect x="40" y="380" width="320" height="70" rx="8" fill="#1e2030" stroke="#6c8cff" stroke-width="2"/>
+        <text x="200" y="410" text-anchor="middle" fill="#6c8cff" font-size="13" font-weight="bold">① profile 组合包</text>
+        <text x="200" y="432" text-anchor="middle" fill="#9ca0b0" font-size="11">web / headless / sdk / sdk-minimal / acp</text>
+
+        <!-- L2 cordis -->
+        <rect x="40" y="290" width="320" height="70" rx="8" fill="#1e2030" stroke="#a78bfa" stroke-width="2"/>
+        <text x="200" y="320" text-anchor="middle" fill="#a78bfa" font-size="13" font-weight="bold">② cordis.patch.yml</text>
+        <text x="200" y="342" text-anchor="middle" fill="#9ca0b0" font-size="11">项目级 patch</text>
+
+        <!-- L3 home -->
+        <rect x="40" y="200" width="320" height="70" rx="8" fill="#1e2030" stroke="#34d399" stroke-width="2"/>
+        <text x="200" y="230" text-anchor="middle" fill="#34d399" font-size="13" font-weight="bold">③ home patch</text>
+        <text x="200" y="252" text-anchor="middle" fill="#9ca0b0" font-size="11">用户主目录级</text>
+
+        <!-- L4 --patch -->
+        <rect x="40" y="110" width="320" height="70" rx="8" fill="#1e2030" stroke="#f59e0b" stroke-width="2"/>
+        <text x="200" y="140" text-anchor="middle" fill="#f59e0b" font-size="13" font-weight="bold">④ --patch overlay</text>
+        <text x="200" y="162" text-anchor="middle" fill="#9ca0b0" font-size="11">命令行覆盖 · 最高优先级</text>
+
+        <!-- 结果 -->
+        <rect x="40" y="45" width="320" height="46" rx="8" fill="#1e2030" stroke="#f472b6"/>
+        <text x="200" y="73" text-anchor="middle" fill="#f472b6" font-size="13" font-weight="bold">最终配置 · dsh --profile web --dump-config</text>
+
+        <!-- 上升箭头 -->
+        <line x1="375" y1="450" x2="375" y2="60" stroke="#2a2d42" stroke-width="2"/>
+        <polygon points="375,45 369,58 381,58" fill="#9ca0b0"/>
+        <text x="390" y="255" text-anchor="middle" fill="#9ca0b0" font-size="11" transform="rotate(90 390 255)">优先级递增</text>
+
+        <text x="200" y="482" text-anchor="middle" fill="#9ca0b0" font-size="11">无特权内核 · 一切可 patch（行 11）</text>
+      </svg>
+    </div>
+    <div class="svg-caption">图5：四层 patch 叠加与最终配置导出</div>
+  </div>
+
+  <div class="subsection" id="s5-3">
+    <h3>5.3 事件即扩展点</h3>
+    <p>三域事件（会话 / agent/* / 能力 fs|tools|telemetry）构成全部扩展面。文档给出两条硬规则：</p>
+    <ul>
+      <li><strong>选对事件域是大多数改动的第一个决定</strong>（architecture.zh.md 行 71）——动手前先确定你挂在哪一域。</li>
+      <li><strong>waterfall 必须调用 next()</strong>（行 110）。按 cordis 入门文档，waterfall 监听器签名是 <code>(...args, next)</code>，不调用 <code>next()</code> 即短路（cordis-primer.zh.md 行 35）；单决策事件短路是设计意图（行 39）。</li>
+    </ul>
+    <p>五概念与五模式是使用事件的前提：插件是实现 Service 的对象、上下文是服务容器、inject 声明依赖、类型化事件通信、注册是可逆副作用（行 9-13）；模式为 emit/waterfall/parallel/serial/bail（行 21-27）。配套纪律：每注册配 disposer（行 51）；拦截优先走事件、能力调用优先走服务方法（行 49）；加载顺序由服务依赖表达（行 11）。</p>
+    <p>新行为的归属由「新行为归属映射表」给出（architecture.zh.md 行 150-171，20 条映射）；seam 承担三角色（行 140）。</p>
+  </div>
+</div>
+
+<!-- ============ 第6节 关键机制详解 ============ -->
+<div class="section" id="s6">
+  <div class="section-title"><span class="num">6</span> 关键机制详解</div>
+  <div class="section-desc">本节深入两个最常被改动的机制：agent-loop 的三层嵌套循环，以及工具执行的三瀑布一守卫管线。</div>
+
+  <div class="subsection" id="s6-1">
+    <h3>6.1 agent-loop 三层嵌套循环</h3>
+
+    <div class="collapse-header" onclick="toggleCollapse(this)">
+      <h4>三层循环：kick / turn / step 的边界与事件</h4>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="collapse-body">
+      <div class="collapse-inner">
+        <p><strong>外层 kick</strong>：<code>while (await turn())</code>（agent.ts :268-281）——只要 turn 返回真就继续下一轮。取消是协作式的，以 <code>interrupted:true</code> 为锚（README :75、:120）；未派发即取消归为 <code>ABORTED_BEFORE_DISPATCH</code>（:184）。</p>
+        <p><strong>中层 turn</strong>：一轮 = 零或多个步骤（architecture.zh.md 行 85）。事件序列固定：<code>turn/start</code>(:336) → <code>preStep</code>(:347) → <code>step/start</code>(:361) → <code>step</code>(:370) → <code>step/end</code>(:388) → <code>agent/turn-stopping</code>(:396) → <code>turn/end</code>(:422)。Phase 三态见 :53-61；StepEndReason 为 completed|max-tokens（:63）；max-tokens 粘滞（:373）。首步为空直接 completed（:356-358）。<code>agent/turn-stopping</code> 是 serial 模式，可 steer 续轮（core.zh.md 行 1125-1147）；工具结果带 <code>concludesTurn</code> 则该步终止轮次（行 1127）。无内置轮次预算，靠 <code>agent/turn-stopping</code> 决定（README :220）。</p>
+        <p><strong>内层 step</strong>：一次模型请求 + 其工具（architecture.zh.md 行 85）。step 内部：<code>prepareRequest</code>(:445) → 准入(:460-471) → <code>buildRequest</code>(:479) → 流式(:480) → <code>agent/request-error</code> 可 retry(:548-563) → <code>assistant/message</code>(:576) → 无 tool-call 则 completed(:587)。用户消息仅 first attempt 准入(:463-478)。<code>maxParallelToolCalls</code> 在 :588-593 读取，默认 10，1=串行，实时修改对下一批生效（README :55）。preStep = claim(:287) → tools.resolve(:292) → assemble(:294) → <code>agent/pre-step</code> waterfall(:296-306)；<code>agent/request</code> waterfall(:630) 只可改采样等其他控制参数，改 provider/model/effort 即抛错拒绝该步(:635-640)；<code>request/header</code> 理由四值(:677-690)；deepFreeze(:727-734)；ToolCallRecovery 补记(:363-385)。</p>
+        <p><strong>失败路径</strong>：请求错误经 <code>agent/request-error</code> 决定是否 retry；取消经协作式 interrupted 锚；未派发取消 → ABORTED_BEFORE_DISPATCH。</p>
+        <p><strong>空步旁路</strong>：首步若为空直接 completed(:356-358)，不进入工具阶段。</p>
+      </div>
+    </div>
+
+    <p>会话侧配合：不带 sessionId 时新建 <code>${id}-session-&lt;uuid&gt;</code>（README :47）；inbox 变更提交 <code>agent/inbox/spliced</code>（:71）；prompt 的 in-history 非空变更采用追加方式，以保留缓存前缀（:164）；事实先落日志再派生下一步（:75）。创建入口 <code>create(:668)/createAgent(:717)/resume(:754)</code>，<code>sessionId</code> 互斥（index.ts :278）。</p>
+  </div>
+
+  <div class="subsection" id="s6-2">
+    <h3>6.2 工具执行管线</h3>
+    <p>阶段顺序（tool-execution-pipeline.zh.md 行 8）：<strong>tools/pre-execute 瀑布 → 单调守卫 → tools/execute 与 tools/post-execute 瀑布</strong>。其中 <code>projectContent</code> 在后置策略之前，<code>finalizeContent</code> 与 <code>tools/result</code> 在其之后。三瀑布均由 tools 包派发（event-producer-consumer.zh.md 行 88-90）。</p>
+    <ul>
+      <li><strong>approval 拦截点</strong>：<code>ctx.approval</code> 一次性询问，缺省或不可答即 deny（行 18）。</li>
+      <li><strong>单调守卫</strong>：守卫 deny 或 abstain 即拒绝，identity protected（行 16）。<code>ToolGuard</code> 没有 allow 分支，监听顺序不可撤销拒绝（subsystems/tools.zh.md 行 458-469）。</li>
+      <li><strong>决策类型</strong>：PreToolDecision 四分支 allow/deny/cancel/ask（行 543-547）；PostToolDecision accept|block（行 555-558）。</li>
+      <li><strong>参数冻结</strong>：参数在策略前物化并冻结（tools.zh.md 行 456、561）——策略看到的即模型看到的。</li>
+      <li><strong>错误归一化</strong>：pipeline/result 快照抛出归一化为 <code>isError</code>（pipeline 行 25；tools.zh.md 行 527-529）；错误码 INVALID_ARGS/INVALID_TOOL_OUTPUT/UNKNOWN_TOOL（tools.zh.md 行 159、563）。</li>
+      <li><strong>观察者只读</strong>：<code>tools/result</code> 观察者不可变换结果，且失败被隔离（行 563）。</li>
+    </ul>
+    <p>作用域限制：<code>fs/write-intent</code>、<code>fs/edit-intent</code> 仅作用于 tool-fs 变更（pipeline 行 21）；工具自有会话事件包括 todo/write、fs/observed、hook/invoked、hook/result、tool/ptc-dispatch（行 22）。<code>additionalContexts</code> 按 FIFO 注入（行 28、63）。PTC 模式下 <code>run_code</code> 及其子调用同入流水线（行 66）。ToolExecutionMode 为 parallel|exclusive，exclusive 形成顺序屏障（tools.zh.md 行 393-398）。</p>
+    <p>价值主张：<strong>流水线无需修改 agent loop 即可执行策略/钩子/沙箱/守卫/改写/观测</strong>（pipeline 行 8）。</p>
+
+    <div class="svg-wrap">
+      <svg viewBox="0 0 900 200">
+        <rect x="0" y="0" width="900" height="200" rx="10" fill="#1e2030" stroke="#2a2d42"/>
+        <text x="450" y="26" text-anchor="middle" fill="#e0e0e8" font-size="14" font-weight="bold">工具执行管线：参数冻结 + 三瀑布 + 单调守卫 + approval 拦截</text>
+
+        <!-- 入口 -->
+        <rect x="20" y="70" width="80" height="56" rx="8" fill="#1e2030" stroke="#9ca0b0"/>
+        <text x="60" y="94" text-anchor="middle" fill="#e0e0e8" font-size="12">调用</text>
+        <text x="60" y="112" text-anchor="middle" fill="#9ca0b0" font-size="11">step 内</text>
+
+        <!-- 参数冻结（策略执行前物化冻结） -->
+        <rect x="112" y="70" width="100" height="56" rx="8" fill="#1e2030" stroke="#a78bfa"/>
+        <text x="162" y="94" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="bold">参数冻结</text>
+        <text x="162" y="112" text-anchor="middle" fill="#9ca0b0" font-size="11">策略前物化</text>
+
+        <!-- waterfall 1 -->
+        <rect x="224" y="70" width="118" height="56" rx="8" fill="#1e2030" stroke="#6c8cff" stroke-width="2"/>
+        <text x="283" y="94" text-anchor="middle" fill="#6c8cff" font-size="12" font-weight="bold">① pre-execute</text>
+        <text x="283" y="112" text-anchor="middle" fill="#9ca0b0" font-size="11">waterfall · 必须 next()</text>
+
+        <!-- approval -->
+        <rect x="354" y="70" width="96" height="56" rx="8" fill="#1e2030" stroke="#f472b6" stroke-width="2"/>
+        <text x="402" y="94" text-anchor="middle" fill="#f472b6" font-size="12" font-weight="bold">approval</text>
+        <text x="402" y="112" text-anchor="middle" fill="#9ca0b0" font-size="11">一次性询问→deny</text>
+
+        <!-- 守卫 -->
+        <rect x="462" y="70" width="106" height="56" rx="8" fill="#1e2030" stroke="#f59e0b" stroke-width="2"/>
+        <text x="515" y="94" text-anchor="middle" fill="#f59e0b" font-size="12" font-weight="bold">单调守卫</text>
+        <text x="515" y="112" text-anchor="middle" fill="#9ca0b0" font-size="11">deny/abstain·无 allow</text>
+
+        <!-- waterfall 2 -->
+        <rect x="580" y="70" width="110" height="56" rx="8" fill="#1e2030" stroke="#6c8cff" stroke-width="2"/>
+        <text x="635" y="94" text-anchor="middle" fill="#6c8cff" font-size="12" font-weight="bold">② execute</text>
+        <text x="635" y="112" text-anchor="middle" fill="#9ca0b0" font-size="11">环绕工具体</text>
+
+        <!-- 工具体 -->
+        <rect x="702" y="70" width="76" height="56" rx="8" fill="#1e2030" stroke="#34d399"/>
+        <text x="740" y="104" text-anchor="middle" fill="#34d399" font-size="12" font-weight="bold">工具体</text>
+
+        <!-- waterfall 3 -->
+        <rect x="790" y="70" width="96" height="56" rx="8" fill="#1e2030" stroke="#6c8cff" stroke-width="2"/>
+        <text x="838" y="94" text-anchor="middle" fill="#6c8cff" font-size="12" font-weight="bold">③ post-execute</text>
+        <text x="838" y="112" text-anchor="middle" fill="#9ca0b0" font-size="11">waterfall</text>
+
+        <!-- 箭头 -->
+        <line x1="100" y1="98" x2="112" y2="98" stroke="#9ca0b0"/><polygon points="112,98 104,94 104,102" fill="#9ca0b0"/>
+        <line x1="212" y1="98" x2="224" y2="98" stroke="#9ca0b0"/><polygon points="224,98 216,94 216,102" fill="#9ca0b0"/>
+        <line x1="342" y1="98" x2="354" y2="98" stroke="#9ca0b0"/><polygon points="354,98 346,94 346,102" fill="#9ca0b0"/>
+        <line x1="450" y1="98" x2="462" y2="98" stroke="#9ca0b0"/><polygon points="462,98 454,94 454,102" fill="#9ca0b0"/>
+        <line x1="568" y1="98" x2="580" y2="98" stroke="#9ca0b0"/><polygon points="580,98 572,94 572,102" fill="#9ca0b0"/>
+        <line x1="690" y1="98" x2="702" y2="98" stroke="#9ca0b0"/><polygon points="702,98 694,94 694,102" fill="#9ca0b0"/>
+        <line x1="778" y1="98" x2="790" y2="98" stroke="#9ca0b0"/><polygon points="790,98 782,94 782,102" fill="#9ca0b0"/>
+
+        <!-- 下游 -->
+        <text x="450" y="158" text-anchor="middle" fill="#9ca0b0" font-size="11">projectContent 在③之前 → ③ 之后 finalizeContent → tools/result（观察者只读 · 失败隔离）</text>
+        <text x="450" y="180" text-anchor="middle" fill="#9ca0b0" font-size="11">抛出归一化为 isError · 流水线无需改 agent loop</text>
+      </svg>
+    </div>
+    <div class="svg-caption">图6：工具执行管线（横向）——三个 waterfall、单调守卫与 approval 拦截点</div>
+  </div>
+
+  <div class="subsection" id="s6-3">
+    <h3>6.3 两机制的共同设计</h3>
+    <p>两条在循环与管线中同时出现的原则：</p>
+    <ul>
+      <li><strong>事实先落日志，再派生下一步</strong>（agent-loop/README :75）：step 产生的事件先写入 Session 追加日志，后续历史由 <code>deriveMessages()</code> 派生（core.zh.md），因此恢复与重放走同一条路径。</li>
+      <li><strong>身份冻结 + 观察者只读</strong>：工具参数在策略前物化冻结（tools.zh.md :456、561），请求侧 <code>deepFreeze</code>（agent.ts :727-734），<code>tools/result</code> 观察者不可变换（tools.zh.md :563）——写路径集中在少数 waterfall，观察者不构成旁路。</li>
+    </ul>
+    <p class="note">注：本节仅陈述素材明确支持的两条共同点；其余「共同设计」候选 [原文未提供此方面信息]。</p>
+  </div>
+</div>
+<div class="section" id="s7">
+  <div class="section-title"><span class="num">7</span> 多 agent 与编排</div>
+  <div class="section-desc">dsh 的多 agent 能力分三层交付：subagent 是常规交付的执行层 seam，workflow 是可选的脚本编排引擎，agent-team 是 experimental 的团队领域。三层成熟度不同、真源不同，但通过同一组 ctx 抽象与事件通道咬合——workflow 的 <code>agent()</code> 正是经 subagent seam 启动子级并归属 parent。</div>
+
+  <div class="subsection" id="s7-1">
+    <h4>7.1 subagent：执行层</h4>
+    <p>所有后端统一走 <code>startActivation</code> 这一入口：能力标记先校验请求选项，<code>prepareContinuable</code> 选择本地 Agent 创建，<code>start</code> 选择一次外部执行（subagent.zh.md 行9）——本地与外部由此成为同一 API 下的双泳道，而不是两套接口。<code>SubagentCapabilities</code> 用四项布尔能力声明后端边界：<code>agentOptions</code> / <code>agentPreset</code> / <code>outputSchema</code> / <code>depthLimit</code>（行20-26）；provider 缺能力即在 start 拒绝、不做静默降级（行105-116；错误码 <code>UNSUPPORTED_CAPABILITY</code> 经源码核验）。</p>
+    <ul>
+      <li><strong>delivery 二元语义</strong>（行43、176）：<code>'parent'</code> 把结束通知投递给父级模型；<code>'caller'</code> 只把结果返回调用方并抑制结束通知——面向模型的工具用 parent 回传，workflow 与 code mode 消费者等 caller 结果，不向父代理注入多余消息。</li>
+      <li><strong>preset 归属</strong>（行130）：仅 <code>spawn</code> 支持独立 <code>agentPreset</code>；省略选择与 <code>fork</code> 都继承父方的活跃组装。结构化结果提交会关闭该 activation 的输入，之后的冷恢复不再继承 <code>outputSchema</code>（行132）。</li>
+      <li><strong>StopReason 五种</strong>（行275-286）：<code>completed</code>（正常结束）｜<code>aborted</code>（请求信号或处置取消）｜<code>error</code>（模型或传输失败）｜<code>max-tokens</code>（触 token 上限）｜<code>refusal</code>（子级拒绝任务）。</li>
+      <li><strong>diagnostic 安全上限</strong>（行260）：后端诊断至多 4096 UTF-8 字节，且不得含工具输入、文件内容或凭证；消费方将其与 <code>output</code> 分开呈现。</li>
+      <li><strong>消息与中断</strong>（行176、222-225）：<code>sendMessage</code> 按确切在线发送者实例授权，仅允许相邻本地代理通信；<code>interrupt</code> 两种授权形态 <code>user</code>（携 parentSessionId）与 <code>ancestor</code>（携 agent）。</li>
+      <li><strong>可发现性与遍历</strong>（行9、381-391）：descriptor 不可用的历史子会话以 <code>mode: 'unknown'</code> 保持可发现，但不授予继续执行能力。<code>listDescendants</code> 以稳定前序递归读取目录，每行携带父级与深度，direct child 的 <code>depth = 1</code>；外部条目是无本地 Session 的叶节点。</li>
+      <li><strong>失败不互踩</strong>（行233）：清理失败单独报告，不覆盖已捕获的执行结果——结果与父级通知保留它，dispose 拒绝，而在线 <code>subagent/end</code> 事件报告 error。</li>
+      <li><strong>生命周期事件</strong>（行605-679）：<code>subagent/start</code>、<code>subagent/end</code>、<code>subagent/provider-added</code>、<code>subagent/provider-removed</code> 均为 emit；start/end 复用同一 delegating parent carrier，生命周期成对到达同一批 scoped 受众。</li>
+    </ul>
+  </div>
+
+  <div class="subsection" id="s7-2">
+    <h4>7.2 workflow：脚本层</h4>
+    <p>workflow seam 是一个<strong>由模型编写、用来启动 subagent 的编排脚本引擎</strong>，属于可选能力，且每上下文只有一个引擎槽 <code>ctx.workflowEngine</code>——与 bash 同模式，一个上下文一个引擎实现（workflow.zh.md 行5）。启动请求 <code>WorkflowStartRequest</code> 必填 <code>parent: Agent</code>（行13、33）；<code>meta</code>/<code>args</code> 是纯 JSON，经 schema 校验且<strong>绝不求值脚本文本</strong>（行13）——脚本是数据，不是被 eval 的代码通道。</p>
+    <ul>
+      <li><strong>结果与生命周期</strong>（行65、75-90、95、98-111）：<code>WorkflowResult.stopReason</code> 三态 <code>completed</code> | <code>cancelled</code> | <code>error</code>，另有 <code>agentsStarted</code> 计数；<code>result</code> 绝不 reject；<code>dispose</code> 幂等且在每条路径上必调。</li>
+      <li><strong>错误分类</strong>（行116）：<code>WorkflowError.fatal</code> 用于脚本钩子误用（错误参数、未知或延迟的 <code>agent()</code> 选项等）；<code>parallel()</code> / <code>pipeline()</code> 的失败直接重抛。</li>
+      <li><strong>6 个 emit 事件</strong>（行120）：<code>workflow/start</code>、<code>workflow/phase</code>、<code>workflow/log</code>、<code>workflow/agent-start</code>、<code>workflow/agent-end</code>、<code>workflow/end</code>。每个监听器异常隔离，只记日志，payload 发递前克隆——观察者崩了不碰运行。</li>
+      <li><strong>持久记录</strong>（行124、126）：顶层 <code>dsh-tool-workflow</code> 消费方把展示事实投影到父 Session，持久记录 <code>tool-workflow/run-start</code> | <code>run-end</code>；首次 append 失败即禁用本运行的后续写入。日志尾部缺成员 end / run end 是<strong>有效中断证据而非损坏</strong>。</li>
+      <li><strong>配对与展示</strong>（行164、186、41、246）：<code>agent-start</code>/<code>agent-end</code> 按 <code>agent.seq</code> 配对，终止路径合成 cancelled end；<code>phases</code> 仅供进度展示，无执行语义。</li>
+    </ul>
+    <p>与 subagent 的接缝在归属上：<strong>workflow 的 <code>agent()</code> 经 subagent seam 启动，子级归属 parent</strong>——脚本层不发明自己的子代理语义，全部下沉到执行层统一的 startActivation 泳道。</p>
+  </div>
+
+  <div class="subsection" id="s7-3">
+    <h4>7.3 agent-team：实验层</h4>
+    <p>agent-team 位于 <code>packages/experimental/agent-team/src/types.ts</code>（agent-team.zh.md 行5），是实验性隐式 Root Team 领域。<code>TeamId</code> 是使用独立品牌类型的 root <code>SessionId</code>，<code>TeamTaskId</code> 形如 <code>task-&lt;n&gt;</code>（行9）。<strong>Lead Session 的日志即 Team 真源</strong>——没有第二份权威状态。</p>
+    <ul>
+      <li><strong>成员与 roster</strong>（行13-24）：成员 <code>context: 'fresh' | 'fork'</code>；每个成员从 <code>provisioning</code> 开始，只到达终态 roster phase <code>active</code> 或 <code>failed</code>；roster 视图中的 <code>running</code>/<code>inactive</code> 是另行派生的，不进成员生命周期。</li>
+      <li><strong>消息投递</strong>（行41、28-53）：每条消息尝试 Steer 投递——running 目标在最近的步骤边界收到，inactive 目标在加载时启动一个轮次，否则留待冷恢复。<strong>Team 不为新消息提供 outbox，也不做重发去重</strong>；历史 mailbox 类型仅为回放保留。</li>
+      <li><strong>任务 DAG</strong>（行58-71、74）：每条 task event 存完整快照，<code>revision</code> 是 compare-and-set 值、每次变更 +1；<code>blockedBy</code> 无环；<code>TeamTaskStatus</code> 为 <code>pending</code> | <code>in_progress</code> | <code>completed</code> | <code>deleted</code>。</li>
+      <li><strong>writeScopes 不是锁</strong>（行58-71）：writeScopes 是提示性路径前缀，只作警告提示，不提供互斥。</li>
+      <li><strong>投影与回放</strong>（行80、110-120、125）：Web 投影经 <code>SessionProjectionMap.agentTeam</code>，failure 报告首个被拒的持久记录；回放按 <code>TeamId</code> 选取，普通 fork 绝不进入新 Root。<code>waitForChange</code> 的 <code>timeoutMs</code> 介于十秒至一小时（行206-208）。</li>
+      <li><strong>权限分工</strong>：<code>spawnTeammate</code>/<code>interrupt</code> 仅 Lead 可调，<code>createTask</code>/<code>updateTask</code>/<code>waitForChange</code> 任意成员可调。</li>
+    </ul>
+  </div>
+
+  <div class="subsection" id="s7-4">
+    <h4>三层关系与成熟度对照</h4>
+    <div class="table-wrap"><table>
+      <tr><th>维度</th><th>subagent（执行层）</th><th>workflow（脚本层）</th><th>agent-team（实验层）</th></tr>
+      <tr><td>成熟度</td><td><span class="tag">常规</span> 非 experimental 包</td><td><span class="tag">可选</span> 单引擎槽</td><td><span class="tag">experimental</span></td></tr>
+      <tr><td>位置</td><td>packages/subagent</td><td>packages/workflow</td><td>packages/experimental/agent-team</td></tr>
+      <tr><td>启动方式</td><td>startActivation 统一 API，本地/外部双泳道</td><td>模型编写的编排脚本，必填 parent</td><td>Lead 会话驱动，spawnTeammate 仅 Lead</td></tr>
+      <tr><td>子级归属</td><td>spawn 支持独立 preset；fork/省略继承父方</td><td><code>agent()</code> 经 subagent seam 归属 parent</td><td>成员 fresh/fork，回放按 TeamId 选取</td></tr>
+      <tr><td>真源</td><td>目录持久化（包 README 定义语义）</td><td>tool-workflow/run-start|run-end 持久记录</td><td>Lead Session 日志</td></tr>
+      <tr><td>通信保证</td><td>delivery: parent|caller；仅相邻本地 sendMessage</td><td>6 emit 事件，监听器隔离 + payload 克隆</td><td>Steer 投递；无 outbox 去重</td></tr>
+      <tr><td>已知边界</td><td>descriptor 不可用 → mode:unknown 可发现不可继续</td><td>result 绝不拒绝；dispose 每路径必调</td><td>writeScopes 非锁；revision CAS 单写快照</td></tr>
+    </table></div>
+    <div class="svg-wrap"><svg viewBox="0 0 600 400">
+      <rect x="0" y="0" width="600" height="400" rx="10" fill="#1e2030"/>
+      <rect x="60" y="24" width="480" height="86" rx="8" fill="#1e2030" stroke="#6c8cff" stroke-width="1.5"/>
+      <text x="300" y="50" text-anchor="middle" font-size="14" fill="#e0e0e8">workflow · 脚本层（可选）</text>
+      <text x="300" y="72" text-anchor="middle" font-size="11" fill="#9ca0b0">模型编写编排脚本 · 单引擎槽 ctx.workflowEngine</text>
+      <text x="300" y="92" text-anchor="middle" font-size="11" fill="#9ca0b0">stopReason: completed | cancelled | error · agentsStarted</text>
+      <line x1="300" y1="110" x2="300" y2="152" stroke="#34d399" stroke-width="1.5"/>
+      <polygon points="300,158 294,148 306,148" fill="#34d399"/>
+      <text x="312" y="136" font-size="11" fill="#34d399">agent() → startActivation，子级归属 parent</text>
+      <rect x="60" y="160" width="480" height="104" rx="8" fill="#1e2030" stroke="#34d399" stroke-width="1.5"/>
+      <text x="300" y="186" text-anchor="middle" font-size="14" fill="#e0e0e8">subagent · 执行层（常规）</text>
+      <text x="300" y="208" text-anchor="middle" font-size="11" fill="#9ca0b0">startActivation 统一入口 · prepareContinuable 本地 / start 外部</text>
+      <text x="300" y="228" text-anchor="middle" font-size="11" fill="#9ca0b0">delivery: parent | caller · 4096B diagnostic 上限</text>
+      <text x="300" y="248" text-anchor="middle" font-size="11" fill="#9ca0b0">StopReason: completed | aborted | error | max-tokens | refusal</text>
+      <line x1="300" y1="264" x2="300" y2="306" stroke="#9ca0b0" stroke-width="1.2" stroke-dasharray="5 4"/>
+      <rect x="60" y="312" width="480" height="66" rx="8" fill="#1e2030" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <text x="300" y="338" text-anchor="middle" font-size="14" fill="#e0e0e8">agent-team · 实验层（experimental）</text>
+      <text x="300" y="360" text-anchor="middle" font-size="11" fill="#9ca0b0">Lead Session 日志即真源 · revision CAS · 无 outbox 去重 · writeScopes 非锁</text>
+    </svg></div>
+    <div class="svg-caption">图7：多 agent 三层堆叠与调用关系——实线箭头为素材记载的唯一跨层调用（workflow 的 agent() 经 subagent seam 归属 parent）；agent-team 以虚线框独立呈现，素材未描述其与上层的直接调用关系。</div>
+  </div>
+</div>
+
+<div class="section" id="s8">
+  <div class="section-title"><span class="num">8</span> 持久化与人工确认</div>
+  <div class="section-desc">dsh 把「事实先落日志」贯彻到两个方向：Session 日志是一切状态的真源（持久化子系统），approval 审计对是人工确认的真源（审批子系统）。两者的失败姿态一致——fail-closed：不修、不猜、不放行。</div>
+
+  <div class="subsection" id="s8-1">
+    <h4>8.1 Session 日志即真源</h4>
+    <p>持久化 seam 只暴露 <code>create</code> / <code>open</code> / <code>stat</code> / <code>list</code> 四个方法，没有平行的持久化事件类型；<code>create</code>/<code>open</code> 返回 <code>SessionHandle</code>（<code>read</code> / <code>append</code> / <code>flush</code> / <code>close</code>），每一次日志读写都经句柄流动，绝不经按 id 寻址的服务方法（persistence.zh.md 行7、11）。随产品交付的 provider 是 <code>dsh-session-persistence-jsonl</code>（行7、341）。</p>
+    <ul>
+      <li><strong>单写者</strong>（行11、74-75）：第二次 <code>open(id, 'write')</code> 抛 <code>SessionAlreadyOwnedError</code>；读句柄上修改抛 <code>SessionReadOnlyError</code>；写所有权丢失抛 <code>SessionOwnershipLostError</code>。</li>
+      <li><strong>append 是 best-effort</strong>（行68-91）：只有 resolved 的 <code>flush</code> 承诺崩溃后存活，flush 是唯一的 durability barrier。</li>
+      <li><strong>header 分离存储</strong>（行137-188）：<code>SessionHeader</code> 独立于事件日志，含 version / id / createdAt / cwd? / parentSession? / isSeeded / origin? / delegationDepth? / agentPreset?；header 不进 <code>SessionEventMap</code>、不到 <code>deriveMessages</code>。</li>
+      <li><strong>存储形态</strong>（行341）：逐会话仅追加的逻辑 JSONL，默认存为带 checksum 的连续 Zstandard frame（可配置为原始行），append 逐批 fsync。</li>
+      <li><strong>格式状态</strong>（行102、191-193、319、357、359）：<code>formatStatus: 'current' | 'migration-required'</code>；<code>SessionFormatUnsupportedError</code>（本构建无法可靠解读）与 <code>SessionPersistenceCorruptionError</code> 严格区分。读方只读当前格式，未知词汇 fail-closed；未实体化会话崩溃后等于从未存在。</li>
+    </ul>
+    <p><strong>格式版本三源对照</strong>（session-format-status.md）：唯一手工维护的写入者常量 <code>SESSION_FORMAT_VERSION</code>（session-format-status.md 行20；常量在 packages/core/session/src/types.ts 行90，值为 4）；<code>latestFinalizedVersion: 4</code>，基线 <code>persistence-changes/finalized/v4.json</code>（行31-35）；<code>latestReleasedVersion: 4</code>，<code>evidenceTag: dsh-v0.2.0-rc.2</code>（行44-47）。写入者常量与已发布记录<strong>相等即表示写入者格式已发布</strong>（行22）；alpha/beta/RC 发布即确立已发布格式义务（行24）。更新纪律：发布前不得推进 release 记录，发布后在同一次双语更新中推进，主干永不降低（行54）；<code>doc-standard.spec.ts</code> 检查记录结构与双语一致，但不查 GitHub（行56）。</p>
+    <div class="table-wrap"><table>
+      <tr><th>源</th><th>位置</th><th>当前值</th><th>语义</th></tr>
+      <tr><td>写入者常量</td><td>packages/core/session/src/types.ts</td><td>SESSION_FORMAT_VERSION</td><td>唯一手工维护的写入侧常量</td></tr>
+      <tr><td>已定稿记录</td><td>persistence-changes/finalized/v4.json</td><td>latestFinalizedVersion: 4</td><td>已接受的兼容基线，记录不可变</td></tr>
+      <tr><td>已发布记录</td><td>session-format-status.md Release record</td><td>latestReleasedVersion: 4（dsh-v0.2.0-rc.2）</td><td>独立核验的已发布版本</td></tr>
+    </table></div>
+  </div>
+
+  <div class="subsection" id="s8-2">
+    <h4>8.2 崩溃恢复：不截断、不修复，修复归读方</h4>
+    <p>一个在轮次中途崩溃的日志以打开的 <code>turn/start</code> 而无 <code>turn/end</code> 结束（persistence.zh.md 行108-110）。持久层的立场是：<strong>不截断、不修复</strong>，只丢弃撕裂的物理尾部；语义修复是读方（resume）的职责——resume 计算 <code>interruptedTurnClosers</code>，为缺失工具错误、未闭合的 step/end 补齐记录，并合成 <code>turn/end {reason:{kind:'interrupted'}}</code>。由此 <code>interrupted</code> 成为<strong>唯一不由循环发出的 TurnEndReason</strong>——它标记的是「存储层观察到的中断」，而非循环自己的终止决策。</p>
+    <p>这条分工与 agent-loop README 的记载互为印证：resume 把 <code>interruptedTurnClosers</code> 作为普通批次追加，「语义崩溃修复是 agent 层的职责，而非存储入口」。存储保真、语义归层——两层都不越权。</p>
+  </div>
+
+  <div class="subsection" id="s8-3">
+    <h4>8.3 approval：fail-closed 的四元组决策</h4>
+    <p><code>ApprovalOutcome</code> 是闭合四元组且失败时拒绝：<code>'allowed-once'</code> | <code>'rejected'</code> | <code>'cancelled'</code> | <code>'unavailable'</code>（approval.zh.md 行21-28）；<code>allowed-once</code> 仅授权所询问的那一个操作（行5、21）。<code>ApprovalPolicy = 'ask' | 'never'</code>（行33-46）：<code>ask</code> 委托给组合的应答者链，无应答默认 <code>unavailable</code>；<code>never</code> 确定性返回 <code>rejected</code>，根本不分发应答者。生效值 = 会话日志中最后一条 <code>approval/policy</code> 事件，<code>setApprovalPolicy</code> 是唯一写入路径（行33）。</p>
+    <ul>
+      <li><strong>请求配对</strong>（行11-18）：每个请求获得全新的 <code>ApprovalRequestId</code>，将 <code>approval/asked</code> 与 <code>approval/decided</code> 审计对配起来。</li>
+      <li><strong>不携带参数</strong>（行53-73）：<code>ApprovalRequest</code> 有意省略工具参数，用 <code>callId</code> 挂到已流式输出的工具调用上——审批问题不重复搬运 payload。</li>
+      <li><strong>作用域</strong>（行86、117-119）：<code>request()</code> 要求发起请求的会话处于一个尚未结束的轮次内，因为审计对必须被轮次包住。</li>
+      <li><strong>失败归一</strong>（行119-123）：abort → <code>cancelled</code>；缺失、抛异常、不合规 → <code>unavailable</code>（fail-closed，非词汇值一律归一为 unavailable）。</li>
+      <li><strong>审计不进 transcript</strong>（行88）：审计事件仅写日志，不进入模型 transcript；模型可见的行为由调用方决定。</li>
+      <li><strong>never 先于分发</strong>（行86）：<code>never</code> 在服务内部 waterfall 分发之前强制，prepend 应答者无法绕过。</li>
+      <li><strong>默认关闭</strong>：调用方除非拿到 <code>allowed-once</code> 否则一律拒绝；第一个应答占据唯一决策槽位；任一审计 append 在提交前失败 → 整个 request reject。UI 通道提供人类应答者，ACP 桥接层提供一次性机器决策。</li>
+    </ul>
+    <div class="svg-wrap"><svg viewBox="0 0 600 400">
+      <rect x="0" y="0" width="600" height="400" rx="10" fill="#1e2030"/>
+      <rect x="200" y="20" width="200" height="46" rx="8" fill="#1e2030" stroke="#6c8cff" stroke-width="1.5"/>
+      <text x="300" y="40" text-anchor="middle" font-size="13" fill="#e0e0e8">ctx.approval.request()</text>
+      <text x="300" y="58" text-anchor="middle" font-size="11" fill="#9ca0b0">要求未结束轮次内 · 全新 ApprovalRequestId</text>
+      <line x1="300" y1="66" x2="300" y2="96" stroke="#9ca0b0" stroke-width="1.2"/>
+      <line x1="150" y1="96" x2="450" y2="96" stroke="#9ca0b0" stroke-width="1.2"/>
+      <line x1="150" y1="96" x2="150" y2="120" stroke="#9ca0b0" stroke-width="1.2"/>
+      <line x1="450" y1="96" x2="450" y2="120" stroke="#9ca0b0" stroke-width="1.2"/>
+      <rect x="70" y="120" width="160" height="40" rx="8" fill="#1e2030" stroke="#a78bfa" stroke-width="1.5"/>
+      <text x="150" y="145" text-anchor="middle" font-size="13" fill="#e0e0e8">policy: ask</text>
+      <rect x="370" y="120" width="160" height="40" rx="8" fill="#1e2030" stroke="#a78bfa" stroke-width="1.5"/>
+      <text x="450" y="145" text-anchor="middle" font-size="13" fill="#e0e0e8">policy: never</text>
+      <line x1="450" y1="160" x2="450" y2="196" stroke="#9ca0b0" stroke-width="1.2"/>
+      <rect x="370" y="196" width="160" height="38" rx="8" fill="#1e2030" stroke="#f472b6" stroke-width="1.5"/>
+      <text x="450" y="220" text-anchor="middle" font-size="13" fill="#e0e0e8">rejected（先于分发）</text>
+      <line x1="150" y1="160" x2="150" y2="196" stroke="#9ca0b0" stroke-width="1.2"/>
+      <line x1="60" y1="196" x2="240" y2="196" stroke="#9ca0b0" stroke-width="1.2"/>
+      <line x1="60" y1="196" x2="60" y2="240" stroke="#9ca0b0" stroke-width="1.2"/>
+      <line x1="150" y1="196" x2="150" y2="240" stroke="#9ca0b0" stroke-width="1.2"/>
+      <line x1="240" y1="196" x2="240" y2="240" stroke="#9ca0b0" stroke-width="1.2"/>
+      <rect x="10" y="240" width="100" height="56" rx="8" fill="#1e2030" stroke="#34d399" stroke-width="1.5"/>
+      <text x="60" y="264" text-anchor="middle" font-size="12" fill="#e0e0e8">allowed-once</text>
+      <text x="60" y="284" text-anchor="middle" font-size="11" fill="#9ca0b0">仅此一操作</text>
+      <rect x="100" y="240" width="100" height="56" rx="8" fill="#1e2030" stroke="#f472b6" stroke-width="1.5"/>
+      <text x="150" y="264" text-anchor="middle" font-size="12" fill="#e0e0e8">rejected</text>
+      <text x="150" y="284" text-anchor="middle" font-size="11" fill="#9ca0b0">首个应答占槽</text>
+      <rect x="190" y="240" width="100" height="56" rx="8" fill="#1e2030" stroke="#f59e0b" stroke-width="1.5"/>
+      <text x="240" y="264" text-anchor="middle" font-size="12" fill="#e0e0e8">cancelled</text>
+      <text x="240" y="284" text-anchor="middle" font-size="11" fill="#9ca0b0">abort 信号</text>
+      <line x1="150" y1="296" x2="150" y2="320" stroke="#9ca0b0" stroke-width="1.2"/>
+      <rect x="70" y="320" width="160" height="44" rx="8" fill="#1e2030" stroke="#22d3ee" stroke-width="1.5"/>
+      <text x="150" y="340" text-anchor="middle" font-size="12" fill="#e0e0e8">unavailable</text>
+      <text x="150" y="357" text-anchor="middle" font-size="11" fill="#9ca0b0">缺失 / 异常 / 不合规 / 无应答</text>
+      <text x="300" y="392" text-anchor="middle" font-size="11" fill="#9ca0b0">fail-closed：非词汇值归一 unavailable；任一审计 append 提交前失败 → 整个 request reject</text>
+    </svg></div>
+    <div class="svg-caption">图8：approval 决策树——四元组 outcome 全部由日志审计对承载，never 在 waterfall 分发前强制，失败路径一律收敛到 unavailable/rejected。</div>
+  </div>
+
+  <div class="subsection" id="s8-4">
+    <h4>8.4 fail-closed 是跨子系统默认姿态</h4>
+    <p>fail-closed 不是 approval 的局部癖好，而是全仓的默认失败姿态。capability-seams 文档把这条写成服务接线原则：「<strong>没有回答方时以 unavailable 关闭失败</strong>」（capability-seams.zh.md 行740，<code>ctx.approval</code> 行）——seam 可以没有实现，但不能默默放行。各子系统的同构表现：</p>
+    <div class="table-wrap"><table>
+      <tr><th>子系统</th><th>失败/未知情形</th><th>默认结果</th><th>依据（行号）</th></tr>
+      <tr><td>approval</td><td>缺失、抛异常、不合规、非词汇值</td><td>unavailable（请求整体 reject）</td><td>approval.zh.md 行119-123</td></tr>
+      <tr><td>approval</td><td>policy = never</td><td>确定性 rejected，不分发应答者</td><td>approval.zh.md 行33-46、86</td></tr>
+      <tr><td>persistence 读路径</td><td>未知格式词汇</td><td>fail-closed，SessionFormatUnsupportedError</td><td>persistence.zh.md 行191-193</td></tr>
+      <tr><td>persistence 写路径</td><td>并发 open(id,'write') / 句柄误用</td><td>AlreadyOwned / ReadOnly / OwnershipLost</td><td>persistence.zh.md 行11、74-75</td></tr>
+      <tr><td>subagent provider</td><td>缺所需 capability</td><td>start 拒绝（UNSUPPORTED_CAPABILITY）</td><td>subagent.zh.md 行105-116</td></tr>
+      <tr><td>workflow 持久记录</td><td>首次 append 失败</td><td>禁用本运行后续写入（不半写）</td><td>workflow.zh.md 行124</td></tr>
+      <tr><td>capability seam</td><td>无回答方</td><td>unavailable 关闭失败</td><td>capability-seams.zh.md 行740</td></tr>
+    </table></div>
+    <p>对照 glossary 的术语纪律可以看清这套姿态的适用面：<strong>轮次</strong>是排空已接纳输入的过程，<strong>步骤</strong>是一次模型请求加其工具（glossary.zh.md 行37-38）；scope 只有两层扁平结构、不继承给 subagent（行13）；被 restriction 过滤的工具与不存在的工具不可区分（行19）——安全语义上宁可「当作不存在」也不留半开的通道。甚至目标激活 <code>armed</code>/<code>disarmed</code> 也<strong>有意不参与持久回放</strong>（行27）：恢复或 fork 后必须经过一次人类授权才开始自动工作——把「默认不动」刻进了持久层。</p>
+  </div>
+</div>
+
+<div class="section" id="s9">
+  <div class="section-title"><span class="num">9</span> 优劣势与展望</div>
+  <div class="section-desc">把前八节的证据收拢成一张双面清单：dsh 的优势几乎都来自同一组设计选择（插件化、事件化、seam 化、日志真源、fail-closed），而它的代价——预览期兼容性、实验层的弱保证、scope 的扁平边界——同样来自同一组选择。</div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h5>优势</h5>
+      <ul>
+        <li><strong>无特权内核</strong>：一切皆插件，服务按 core / seam / 组合包 / service 四类划分（capability-seams.zh.md 行8、653），角色字段 service|core|seam|bundle，连 <code>ctx.agentLoop</code> 也只是 bundle（行730）；消费方依赖抽象 ctx 键而非具体实现，没有绕过插件体系的特权路径。</li>
+        <li><strong>事件即扩展点</strong>：事件可被门禁拦截——如 <code>ctx.fs -.event gate.-&gt; pkg_fs_observation_policy</code>（行650）；subagent/workflow 各自 emit 完整生命周期事件，新行为挂在文档化的扩展点上而非改循环。</li>
+        <li><strong>seam 可替换</strong>：<code>ctx.llm</code> → llm-deepseek / llm-pi-ai / llm-replay，<code>ctx.fs</code> → fs-local / fs-sandbox / fs-ssh，<code>ctx.shell</code> → bash-local / bash-sandbox / pwsh-local（行678、743、734-735）——同一抽象键下多实现并存。</li>
+        <li><strong>事实先落日志</strong>：Session 日志即真源（persistence），Lead Session 日志即 Team 真源（agent-team），审计对仅写日志不进 transcript（approval 行88）——状态不是内存里的偶然产物。</li>
+        <li><strong>fail-closed</strong>：审批默认关闭、无回答方 unavailable、未知格式词汇拒绝解读、限制工具与不存在工具不可区分——失败方向永远是「关小」而非「放开」。</li>
+        <li><strong>双平面可观测</strong>：运行时事件（subagent/start|end 等 4 事件、workflow 6 事件）与持久记录（tool-workflow/run-start|run-end、approval/asked|decided）构成两条互证的观测通道，Web 投影（如 <code>SessionProjectionMap.agentTeam</code>）从日志单向派生。</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h5>劣势</h5>
+      <ul>
+        <li><strong>开发者预览，不保证兼容</strong>：README 行13 明言处于 developer preview、快速迭代，「未来将出现破坏兼容性的变更」（THERE WILL BE COMPATIBILITY-BREAKING CHANGES）。</li>
+        <li><strong>无内置轮次预算</strong>：agent-loop README 行220——工具调用或 steering 会让当前轮次继续，限制失控轮次的策略必须从既有生命周期扩展点（如 <code>agent/turn-stopping</code>）自行执行取消。</li>
+        <li><strong>agent-team 实验期弱保证</strong>：不为新消息提供 outbox 或重发去重（agent-team 行28-53），writeScopes 只是提示性路径前缀、不是锁（行58-71）。</li>
+        <li><strong>scope 不继承</strong>：两层扁平结构，带作用域的注册不会向下继承给 subagent，子树行为须靠 lineage 数据表达（glossary 行13）。</li>
+        <li><strong>限制工具不可见</strong>：被 restriction 过滤的工具与不存在的工具无法区分（glossary 行19）——模型侧无从分辨「被禁」与「没有」。</li>
+        <li><strong>恢复后默认停机</strong>：目标激活 armed/disarmed 有意不参与持久回放，恢复/fork 后须一次人类授权才开始自动工作（glossary 行27）——安全换来的是一次额外交互。</li>
+        <li><strong>持久保证依赖调用纪律</strong>：append 是 best-effort，只有 flush 是 durability barrier（persistence 行68-91）；冷恢复不继承 outputSchema（subagent 行132）。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="subsection" id="s9-1">
+    <h4>9.1 横向对照（本仓内部成熟度）</h4>
+    <p>素材未提供 dsh 与外部同类 harness 在扩展机制、多 agent、持久化、审批等维度的逐项对比数据，故此处改为<strong>本仓内部对照</strong>：三个多 agent 层次在四个维度上的成熟度差异。外部产品对比：[原文未提供此方面信息]。</p>
+    <div class="table-wrap"><table>
+      <tr><th>维度</th><th>subagent</th><th>workflow</th><th>agent-team</th></tr>
+      <tr><td>扩展机制</td><td>startActivation seam + 4 个 emit 事件</td><td>单引擎槽 + 6 个 emit 事件 + 脚本钩子</td><td>模型工具 + 宿主适配器（experimental）</td></tr>
+      <tr><td>多 agent 形态</td><td>spawn/fork 子代理，本地与外部双泳道</td><td>脚本编排 N 个 agent()，归属 parent</td><td>Lead + 成员 roster，任务 DAG blockedBy</td></tr>
+      <tr><td>持久化</td><td>子会话目录持久化；descriptor 可 unknown</td><td>tool-workflow/run-start|run-end，首败禁写</td><td>Lead Session 日志即真源；revision CAS 快照</td></tr>
+      <tr><td>审批/授权</td><td>interrupt 两种授权 user|ancestor</td><td>必填 parent（审批链素材未提供）</td><td>spawnTeammate/interrupt 仅 Lead</td></tr>
+      <tr><td>成熟度</td><td><span class="tag">常规</span></td><td><span class="tag">可选</span></td><td><span class="tag">experimental</span></td></tr>
+    </table></div>
+    <p>另一个可对照的成熟度轴是包分级：非 experimental 包需要产品用途或显式分类，experimental 包是「被评估中的能力、不带产品支持承诺」；会话格式侧则用三源相等（写入者 = 已定稿 = 已发布 = 4，evidenceTag dsh-v0.2.0-rc.2）来标记「当前写入格式已发布」这一最硬的兼容承诺。</p>
+  </div>
+
+  <div class="subsection" id="s9-2">
+    <h4>9.2 未来方向</h4>
+    <div class="highlight">
+      <ul>
+        <li><strong>预览期破坏性变更预期</strong>：README 行13 已明示 developer preview 阶段将出现兼容性破坏变更；配套纪律是每项外部可感知的破坏性变更立即记入 upgrade guide（仓根 AGENTS.md）、会话格式主干版本永不降低（session-format-status 行54）。</li>
+        <li><strong>格式义务随发布递进</strong>：alpha/beta/RC 发布即确立已发布格式义务（行24）；发布前不得推进 release 记录，发布后在同一次双语更新中推进——版本节奏本身就是兼容承诺的执行器。</li>
+        <li><strong>experimental 层的转正路径</strong>：agent-team 目前位于 packages/experimental，其转正标准与时间表：[原文未提供此方面信息]。</li>
+        <li><strong>可验证的机制储备</strong>：事件门禁、seam 多实现、fail-closed 归一、interruptedTurnClosers 读方修复——这些已落地的扩展点为预览期之后的演进提供了不破坏日志真源的接口；具体的路线图排序：[原文未提供此方面信息]。</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center; padding:40px 0 20px; color:var(--text2); font-size:13px; border-top:1px solid var(--border); margin-top:40px;">
+  <p>DeepSeek Harness（dsh）深度分析 深度专业分析 | 基于 deepseek-harness 仓库 19 份核心文档与源码（README、architecture、cordis-primer、glossary、agent-loop 源码、core/lifecycle/事件矩阵/工具管线/subagent/workflow/persistence/approval/agent-team/seams/session-format-status）</p>
+</div>
+
+</div><!-- end main -->
+
+<script>
+// Collapsible sections
+function toggleCollapse(el) {
+  el.classList.toggle('open');
+  const body = el.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// Nav active state
+const sections = document.querySelectorAll('.section');
+const navLinks = document.querySelectorAll('.nav a');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    const top = s.offsetTop - 100;
+    if (window.scrollY >= top) current = s.id;
+  });
+  navLinks.forEach(a => {
+    a.classList.remove('active');
+    if (a.getAttribute('href') === '#' + current) a.classList.add('active');
+  });
+});
+
+// Smooth scroll
+navLinks.forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+</script>
+</body>
+</html>
